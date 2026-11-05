@@ -11,6 +11,10 @@
   <img src="https://img.shields.io/github/followers/NimrahQ?style=flat&logo=github&color=f8a5c2" alt="Followers" />
 </p>
 
+<p align="center">
+  <img width="420" src="https://raw.githubusercontent.com/NimrahQ/NimrahQ/main/assets/heart.svg" alt="Animated glowing particle heart" />
+</p>
+
 ## 🌸 About Me
 
 I'm a **Front-End / Full-Stack Developer with 3+ years of experience** building scalable, responsive, production-ready web apps with **React.js, Next.js and TypeScript**.
