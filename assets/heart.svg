@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="720" viewBox="0 0 600 720">
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="470" viewBox="0 0 600 470">
 <defs>
 <filter id="blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="16"/></filter>
 <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6"/></filter>
 <radialGradient id="pool" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#7dd3fc" stop-opacity=".95"/><stop offset=".45" stop-color="#2563eb" stop-opacity=".5"/><stop offset="1" stop-color="#1d4ed8" stop-opacity="0"/></radialGradient>
 </defs>
-<rect width="600" height="720" rx="18" fill="#02040a"/>
+<rect width="600" height="470" rx="18" fill="#02040a"/>
 <ellipse cx="300" cy="408" rx="125" ry="26" fill="url(#pool)"><animate attributeName="opacity" values=".55;1;.55" dur="2.2s" repeatCount="indefinite"/><animate attributeName="rx" values="105;135;105" dur="2.2s" repeatCount="indefinite"/></ellipse>
 <ellipse cx="300" cy="408" rx="40" ry="6" fill="none" stroke="#7dd3fc" stroke-width="1.2"><animate attributeName="rx" values="30;135;30" dur="3.4s" begin="0.00s" repeatCount="indefinite"/><animate attributeName="ry" values="4;26;4" dur="3.4s" begin="0.00s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values=".9;0;.9" dur="3.4s" begin="0.00s" repeatCount="indefinite"/></ellipse>
 <ellipse cx="300" cy="408" rx="40" ry="6" fill="none" stroke="#7dd3fc" stroke-width="1.2"><animate attributeName="rx" values="30;135;30" dur="3.4s" begin="1.70s" repeatCount="indefinite"/><animate attributeName="ry" values="4;26;4" dur="3.4s" begin="1.70s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values=".9;0;.9" dur="3.4s" begin="1.70s" repeatCount="indefinite"/></ellipse>
@@ -1035,28 +1035,4 @@
 <path d="M225.9 172.1 L227.2 176.7 L231.7 177.9 L227.2 179.2 L225.9 183.8 L224.6 179.2 L220.1 177.9 L224.6 176.7Z" opacity="0"><animate attributeName="opacity" values="0;1;0" dur="1.4s" begin="3.67s" repeatCount="indefinite"/></path>
 <path d="M423.5 71.1 L424.3 74.0 L427.2 74.8 L424.3 75.6 L423.5 78.5 L422.7 75.6 L419.8 74.8 L422.7 74.0Z" opacity="0"><animate attributeName="opacity" values="0;1;0" dur="2.2s" begin="4.69s" repeatCount="indefinite"/></path>
 </g>
-<rect x="36" y="450" width="528" height="238" rx="12" fill="#0b0f19" stroke="#1e293b"/>
-<circle cx="58" cy="472" r="6" fill="#ff5f57"/>
-<circle cx="78" cy="472" r="6" fill="#febc2e"/>
-<circle cx="98" cy="472" r="6" fill="#28c840"/>
-<text x="58" y="506" font-family="Fira Code,Consolas,monospace" font-size="12" fill="#475569" xml:space="preserve"> 1</text>
-<text x="86" y="506" font-family="Fira Code,Consolas,monospace" font-size="12" xml:space="preserve"><tspan fill="#c084fc">const</tspan> <tspan fill="#7dd3fc">floatParticles</tspan> <tspan fill="#e2e8f0">= [];</tspan></text>
-<text x="58" y="523" font-family="Fira Code,Consolas,monospace" font-size="12" fill="#475569" xml:space="preserve"> 2</text>
-<text x="86" y="523" font-family="Fira Code,Consolas,monospace" font-size="12" xml:space="preserve"><tspan fill="#c084fc">const</tspan> <tspan fill="#7dd3fc">FLOAT_COUNT</tspan> <tspan fill="#e2e8f0">= 140;</tspan></text>
-<text x="58" y="540" font-family="Fira Code,Consolas,monospace" font-size="12" fill="#475569" xml:space="preserve"> 3</text>
-<text x="86" y="540" font-family="Fira Code,Consolas,monospace" font-size="12" xml:space="preserve"><tspan fill="#c084fc">for</tspan> <tspan fill="#7dd3fc">(let i = 0; i &lt; FLOAT_COUNT; i++) {</tspan> <tspan fill="#e2e8f0"></tspan></text>
-<text x="58" y="557" font-family="Fira Code,Consolas,monospace" font-size="12" fill="#475569" xml:space="preserve"> 4</text>
-<text x="86" y="557" font-family="Fira Code,Consolas,monospace" font-size="12" xml:space="preserve"><tspan fill="#cbd5e1">  </tspan> <tspan fill="#7dd3fc">const p = new Particle(</tspan> <tspan fill="#e2e8f0"></tspan></text>
-<text x="58" y="574" font-family="Fira Code,Consolas,monospace" font-size="12" fill="#475569" xml:space="preserve"> 5</text>
-<text x="86" y="574" font-family="Fira Code,Consolas,monospace" font-size="12" xml:space="preserve"><tspan fill="#cbd5e1">  </tspan> <tspan fill="#7dd3fc">  Math.random() * width, "float");</tspan> <tspan fill="#e2e8f0"></tspan></text>
-<text x="58" y="591" font-family="Fira Code,Consolas,monospace" font-size="12" fill="#475569" xml:space="preserve"> 6</text>
-<text x="86" y="591" font-family="Fira Code,Consolas,monospace" font-size="12" xml:space="preserve"><tspan fill="#cbd5e1">  </tspan> <tspan fill="#7dd3fc">floatParticles.push(p);</tspan> <tspan fill="#e2e8f0"></tspan></text>
-<text x="58" y="608" font-family="Fira Code,Consolas,monospace" font-size="12" fill="#475569" xml:space="preserve"> 7</text>
-<text x="86" y="608" font-family="Fira Code,Consolas,monospace" font-size="12" xml:space="preserve"><tspan fill="#cbd5e1">}</tspan> <tspan fill="#7dd3fc"></tspan> <tspan fill="#e2e8f0"></tspan></text>
-<text x="58" y="625" font-family="Fira Code,Consolas,monospace" font-size="12" fill="#475569" xml:space="preserve"> 8</text>
-<text x="86" y="625" font-family="Fira Code,Consolas,monospace" font-size="12" xml:space="preserve"><tspan fill="#c084fc">function</tspan> <tspan fill="#7dd3fc">spawnHeartBurst(x, y) {</tspan> <tspan fill="#e2e8f0"></tspan></text>
-<text x="58" y="642" font-family="Fira Code,Consolas,monospace" font-size="12" fill="#475569" xml:space="preserve"> 9</text>
-<text x="86" y="642" font-family="Fira Code,Consolas,monospace" font-size="12" xml:space="preserve"><tspan fill="#cbd5e1">  </tspan> <tspan fill="#7dd3fc">for (let i = 0; i &lt; 140; i++) burst.push(...)</tspan> <tspan fill="#e2e8f0"></tspan></text>
-<text x="58" y="659" font-family="Fira Code,Consolas,monospace" font-size="12" fill="#475569" xml:space="preserve">10</text>
-<text x="86" y="659" font-family="Fira Code,Consolas,monospace" font-size="12" xml:space="preserve"><tspan fill="#cbd5e1">}</tspan> <tspan fill="#7dd3fc"></tspan> <tspan fill="#e2e8f0"></tspan></text>
 </svg>

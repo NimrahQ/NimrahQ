@@ -12,7 +12,11 @@
 </p>
 
 <p align="center">
-  <img width="420" src="https://raw.githubusercontent.com/NimrahQ/NimrahQ/main/assets/heart.svg" alt="Animated glowing particle heart" />
+  <a href="https://nimrahq.github.io/NimrahQ/">
+    <img width="480" src="https://raw.githubusercontent.com/NimrahQ/NimrahQ/main/assets/heart.svg" alt="Animated glowing particle heart" />
+  </a>
+  <br />
+  <sub>👆 <a href="https://nimrahq.github.io/NimrahQ/">Click for the full-screen interactive version</a> (move your mouse, click to burst)</sub>
 </p>
 
 ## 🌸 About Me

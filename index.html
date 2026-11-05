@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nimrah's Heart</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; cursor: none; touch-action: none; }
+  .hint {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    font: 13px/1 system-ui, sans-serif; color: #7dd3fc; opacity: .7; letter-spacing: .04em;
+    pointer-events: none; transition: opacity 1.2s;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hint" id="hint">move your mouse · click to burst</div>
+<script>
+(() => {
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const SHADES = ['#bae6fd', '#7dd3fc', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8'];
+  const FORM_TIME = 13, FALL_TIME = 1.8;
+  let W, H, DPR, cx, cy, S, poolY;
+  let particles = [], sparkles = [];
+  let t = 0, last = performance.now(), cycleStart = 0, phase = 'rise';
+  const mouse = { x: -9999, y: -9999, active: false };
+
+  const heartVal = (x, y) => Math.pow(x*x + y*y - 1, 3) - x*x*Math.pow(y, 3);
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  function layout() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * DPR; cv.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cx = W / 2; cy = H * 0.44;
+    S = Math.min(W, H) * 0.27;
+    poolY = H * 0.9;
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    build();
+  }
+
+  function build() {
+    const count = W < 700 ? 1500 : 2800;
+    particles = [];
+    while (particles.length < count) {
+      const x = rand(-1.3, 1.3), y = rand(-1.3, 1.25), v = heartVal(x, y);
+      if (v > 0 || Math.random() > 0.25 + 0.75 * Math.exp(v * 18)) continue;
+      const hx = cx + x * S, hy = cy - y * S;
+      particles.push({
+        hx, hy, x: cx + rand(-W*.12, W*.12), y: poolY + rand(-6, 10),
+        vx: 0, vy: 0,
+        delay: Math.max(0, 3.6 * (1 - (hy - (cy - S*1.3)) / (S*2.6)) + rand(0, .6)),
+        swirl: Math.random() < .5 ? -1 : 1,
+        r: rand(.6, 1.9), col: SHADES[(Math.random() * SHADES.length) | 0],
+        a: rand(.55, 1), tw: rand(0, 6.28), tws: rand(1, 3.5),
+      });
+    }
+    cycleStart = t; phase = 'rise';
+  }
+
+  function burst(x, y) {
+    for (const p of particles) {
+      const dx = p.x - x, dy = p.y - y, d = Math.hypot(dx, dy) + 1;
+      if (d < 260) { const f = (1 - d / 260) * 14; p.vx += dx / d * f; p.vy += dy / d * f; }
+    }
+    for (let i = 0; i < 40; i++) {
+      const a = rand(0, 6.28), s = rand(1.5, 6);
+      sparkles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, size: rand(2, 5) });
+    }
+  }
+
+  function star(x, y, s) {
+    ctx.beginPath();
+    ctx.moveTo(x, y - s); ctx.lineTo(x + s*.2, y - s*.2); ctx.lineTo(x + s, y); ctx.lineTo(x + s*.2, y + s*.2);
+    ctx.lineTo(x, y + s); ctx.lineTo(x - s*.2, y + s*.2); ctx.lineTo(x - s, y); ctx.lineTo(x - s*.2, y - s*.2);
+    ctx.closePath(); ctx.fill();
+  }
+
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.05); last = now; t += dt;
+    const age = t - cycleStart;
+
+    if (phase === 'rise' && age > FORM_TIME) { phase = 'fall'; cycleStart = t; }
+    else if (phase === 'fall' && age > FALL_TIME) { phase = 'rise'; cycleStart = t; for (const p of particles) { p.x = cx + rand(-W*.12, W*.12); p.y = poolY + rand(-6, 10); p.vx = p.vy = 0; } }
+    const a0 = t - cycleStart;
+    const beat = 1 + 0.018 * Math.sin(t * 3.4);
+
+    // trails
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0,0,0,0.16)';
+    ctx.fillRect(0, 0, W, H);
+
+    // pool glow
+    const pulse = 0.75 + 0.25 * Math.sin(t * 2.6);
+    const g = ctx.createRadialGradient(cx, poolY, 0, cx, poolY, W * 0.22);
+    g.addColorStop(0, `rgba(125,211,252,${0.55 * pulse})`);
+    g.addColorStop(.5, `rgba(37,99,235,${0.22 * pulse})`);
+    g.addColorStop(1, 'rgba(29,78,216,0)');
+    ctx.save(); ctx.translate(0, poolY); ctx.scale(1, 0.18); ctx.translate(0, -poolY);
+    ctx.fillStyle = g; ctx.fillRect(0, poolY - W, W, W * 2); ctx.restore();
+
+    ctx.globalCompositeOperation = 'lighter';
+    const R = Math.max(90, S * 0.55);
+    for (const p of particles) {
+      const rising = phase === 'rise';
+      if (rising && a0 < p.delay) continue;
+      let tx = cx + (p.hx - cx) * beat, ty = cy + (p.hy - cy) * beat;
+      let k = 0.010, damp = 0.90;
+      if (!rising) { tx = cx + (p.x - cx) * 0.5; ty = poolY; k = 0.02; }
+      const dx = tx - p.x, dy = ty - p.y;
+      p.vx += dx * k; p.vy += dy * k;
+      if (rising) {                       // swirl while travelling
+        const dist = Math.hypot(dx, dy), sw = Math.min(dist / S, 1.4) * 0.35 * p.swirl;
+        p.vx += -dy / (dist + 1) * sw; p.vy += dx / (dist + 1) * sw;
+      }
+      if (mouse.active) {
+        const mx = p.x - mouse.x, my = p.y - mouse.y, d = Math.hypot(mx, my);
+        if (d < R) { const f = Math.pow(1 - d / R, 2) * 2.2; p.vx += mx / (d + 1) * f; p.vy += my / (d + 1) * f; }
+      }
+      p.vx *= damp; p.vy *= damp; p.x += p.vx; p.y += p.vy;
+
+      const tw = 0.6 + 0.4 * Math.sin(t * p.tws + p.tw);
+      const fade = rising ? Math.min(1, (a0 - p.delay) * 1.2) : Math.max(0, 1 - a0 / FALL_TIME);
+      ctx.globalAlpha = p.a * tw * fade;
+      ctx.fillStyle = p.col;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
+    }
+
+    // sparkles: burst ones + ambient twinkles on the heart
+    ctx.fillStyle = '#e0f2fe';
+    for (let i = sparkles.length - 1; i >= 0; i--) {
+      const s = sparkles[i];
+      s.x += s.vx; s.y += s.vy; s.vx *= .96; s.vy *= .96; s.life -= dt * 0.9;
+      if (s.life <= 0) { sparkles.splice(i, 1); continue; }
+      ctx.globalAlpha = s.life; star(s.x, s.y, s.size);
+    }
+    if (phase === 'rise' && a0 > 4 && Math.random() < 0.35) {
+      const p = particles[(Math.random() * particles.length) | 0];
+      sparkles.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: .7, size: rand(3, 7) });
+    }
+
+    // cursor glow
+    if (mouse.active) {
+      const cg = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 40);
+      cg.addColorStop(0, 'rgba(125,211,252,.35)'); cg.addColorStop(1, 'rgba(125,211,252,0)');
+      ctx.globalAlpha = 1; ctx.fillStyle = cg; ctx.fillRect(mouse.x - 40, mouse.y - 40, 80, 80);
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+
+  const hint = document.getElementById('hint');
+  const hideHint = () => { hint.style.opacity = 0; };
+  addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; setTimeout(hideHint, 4000); });
+  addEventListener('pointerleave', () => { mouse.active = false; });
+  addEventListener('pointerdown', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; burst(e.clientX, e.clientY); });
+  addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') mouse.active = false; });
+  addEventListener('resize', layout);
+
+  layout();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
