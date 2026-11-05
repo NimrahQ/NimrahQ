@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://nimrahq.github.io/NimrahQ/">
-    <img width="480" src="https://raw.githubusercontent.com/NimrahQ/NimrahQ/main/assets/morph.svg" alt="Particles morphing: heart, world, brain, laptop" />
+    <img width="100%" src="https://raw.githubusercontent.com/NimrahQ/NimrahQ/main/assets/morph3.svg" alt="Particles morphing: heart, world, brain, laptop" />
   </a>
   <br />
   <sub>👆 <a href="https://nimrahq.github.io/NimrahQ/">Click for the full-screen interactive version</a> (move your mouse, click to burst)</sub>
