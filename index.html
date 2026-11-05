@@ -3,63 +3,149 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nimrah's Heart</title>
+<title>Nimrah's Particles</title>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   canvas { display: block; width: 100vw; height: 100vh; cursor: none; touch-action: none; }
   .hint {
     position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
     font: 13px/1 system-ui, sans-serif; color: #7dd3fc; opacity: .7; letter-spacing: .04em;
-    pointer-events: none; transition: opacity 1.2s;
+    pointer-events: none; transition: opacity 1.2s; text-align: center;
+  }
+  .label {
+    position: fixed; left: 50%; top: 22px; transform: translateX(-50%);
+    font: 600 14px/1 system-ui, sans-serif; color: #bae6fd; letter-spacing: .3em; text-transform: uppercase;
+    pointer-events: none; opacity: 0; transition: opacity .8s;
   }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<div class="label" id="label"></div>
 <div class="hint" id="hint">move your mouse · click to burst</div>
 <script>
 (() => {
   const cv = document.getElementById('c');
   const ctx = cv.getContext('2d');
+  const labelEl = document.getElementById('label');
   const SHADES = ['#bae6fd', '#7dd3fc', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8'];
-  const FORM_TIME = 13, FALL_TIME = 1.8;
-  let W, H, DPR, cx, cy, S, poolY;
-  let particles = [], sparkles = [];
-  let t = 0, last = performance.now(), cycleStart = 0, phase = 'rise';
-  const mouse = { x: -9999, y: -9999, active: false };
+  const FIRST_HOLD = 9, HOLD = 5.5, SCATTER = 1.0;
+  const SW = 400, SH = 300;                         // shape design space
+  const NAMES = ['Love', 'World', 'Mind', 'Code'];
 
-  const heartVal = (x, y) => Math.pow(x*x + y*y - 1, 3) - x*x*Math.pow(y, 3);
+  let W, H, DPR, cx, cy, scale, poolY;
+  let particles = [], sparkles = [], targets = [];
+  let t = 0, last = performance.now();
+  let phase = 'form', phaseT0 = 0, first = true, shapeIdx = 0;
+  const mouse = { x: -9999, y: -9999, active: false };
   const rand = (a, b) => a + Math.random() * (b - a);
 
-  function layout() {
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    W = innerWidth; H = innerHeight;
-    cv.width = W * DPR; cv.height = H * DPR;
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    cx = W / 2; cy = H * 0.44;
-    S = Math.min(W, H) * 0.27;
-    poolY = H * 0.9;
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-    build();
+  /* ---------- shapes drawn to an offscreen canvas, then sampled ---------- */
+  const off = document.createElement('canvas'); off.width = SW; off.height = SH;
+  const o = off.getContext('2d', { willReadFrequently: true });
+  const FILL = 'rgba(255,255,255,0.22)', LINE = '#fff';
+  function begin() { o.clearRect(0, 0, SW, SH); o.lineCap = 'round'; o.lineJoin = 'round'; o.fillStyle = FILL; o.strokeStyle = LINE; o.lineWidth = 3; }
+
+  const SHAPES = [
+    function heart() {
+      begin(); o.beginPath();
+      for (let i = 0; i <= 360; i += 2) {
+        const a = i * Math.PI / 180, k = 7.6;
+        const x = 16 * Math.sin(a) ** 3;
+        const y = 13 * Math.cos(a) - 5 * Math.cos(2*a) - 2 * Math.cos(3*a) - Math.cos(4*a);
+        i ? o.lineTo(200 + x*k, 148 - y*k) : o.moveTo(200 + x*k, 148 - y*k);
+      }
+      o.closePath(); o.fill(); o.stroke();
+    },
+    function globe() {
+      begin(); const r = 112;
+      o.beginPath(); o.arc(200, 150, r, 0, 6.2832); o.fill(); o.stroke();
+      o.lineWidth = 2;
+      for (const f of [.3, .62, .92]) { o.beginPath(); o.ellipse(200, 150, r * f, r, 0, 0, 6.2832); o.stroke(); }
+      for (const lat of [-60, -30, 0, 30, 60]) {
+        const a = lat * Math.PI / 180, y = 150 + r * Math.sin(a), hw = r * Math.cos(a);
+        o.beginPath(); o.moveTo(200 - hw, y); o.lineTo(200 + hw, y); o.stroke();
+      }
+      o.lineWidth = 2.5; o.beginPath(); o.ellipse(200, 150, 185, 38, -0.4, 0, 6.2832); o.stroke();
+    },
+    function brain() {
+      begin(); o.save(); o.translate(200 - 100 * 1.7, 150 - 80 * 1.7 - 6); o.scale(1.7, 1.7); o.lineWidth = 2.2;
+      const body = new Path2D('M30 90 C10 70 15 40 40 28 C50 10 85 5 100 15 C120 5 155 12 165 35 C190 40 195 75 172 92 C172 110 150 118 135 112 C125 125 95 120 90 108 C70 118 40 112 30 90 Z');
+      o.fill(body); o.stroke(body);
+      const lines = [
+        'M120 112 C125 135 160 138 168 118', 'M126 122 C140 128 152 128 162 122', 'M100 112 C100 130 104 140 108 150 L122 150 C118 135 116 125 118 112',
+        'M100 15 C95 40 105 60 98 85',
+        'M45 50 C60 40 75 55 90 42', 'M108 30 C112 45 125 40 130 28', 'M140 45 C150 55 165 50 172 60',
+        'M40 75 C55 65 70 80 85 68', 'M95 60 C105 75 120 65 135 75', 'M145 80 C155 70 170 78 175 88',
+        'M60 95 C75 90 85 100 100 92', 'M110 90 C120 100 135 95 150 100', 'M62 32 C66 42 78 36 80 26',
+      ];
+      for (const d of lines) o.stroke(new Path2D(d));
+      o.restore();
+    },
+    function laptop() {
+      begin(); o.fillStyle = 'rgba(255,255,255,0.09)';
+      o.beginPath(); o.roundRect(70, 38, 260, 160, 10); o.fill(); o.stroke();
+      o.beginPath(); o.roundRect(82, 50, 236, 136, 4); o.stroke();
+      o.lineWidth = 4;
+      const lens = [90, 140, 60, 120, 100, 150, 70], ind = [0, 16, 16, 0, 16, 32, 16];
+      lens.forEach((len, i) => { const y = 66 + i * 17; o.beginPath(); o.moveTo(98 + ind[i], y); o.lineTo(98 + ind[i] + len, y); o.stroke(); });
+      o.lineWidth = 3;
+      o.beginPath(); o.moveTo(36, 210); o.lineTo(364, 210); o.lineTo(338, 250); o.lineTo(62, 250); o.closePath(); o.fill(); o.stroke();
+      o.lineWidth = 2;
+      for (const y of [222, 232]) { o.beginPath(); o.moveTo(86 + (y - 222) * 2, y); o.lineTo(314 - (y - 222) * 2, y); o.setLineDash([8, 5]); o.stroke(); o.setLineDash([]); }
+      o.beginPath(); o.moveTo(170, 243); o.lineTo(230, 243); o.stroke();
+    },
+  ];
+
+  function sampleShape(draw, N) {
+    draw();
+    const d = o.getImageData(0, 0, SW, SH).data, idx = [];
+    for (let i = 3; i < d.length; i += 4) if (d[i] > 25) idx.push(i - 3 >> 2);
+    const out = new Float32Array(N * 2); let n = 0, guard = 0;
+    while (n < N && guard++ < N * 60) {
+      const k = idx[(Math.random() * idx.length) | 0], a = d[k * 4 + 3] / 255;
+      if (Math.random() > Math.pow(a, 1.4) * 0.95 + 0.04) continue;
+      out[n * 2] = (k % SW) + rand(-.7, .7) - SW / 2; out[n * 2 + 1] = ((k / SW) | 0) + rand(-.7, .7) - SH / 2; n++;
+    }
+    return out;
   }
 
-  function build() {
-    const count = W < 700 ? 1500 : 2800;
+  /* ---------- layout / setup ---------- */
+  function layout() {
+    DPR = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cx = W / 2; cy = H * 0.46; poolY = H * 0.92;
+    scale = Math.min(W * 0.64 / SW, H * 0.62 / SH);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    const count = W < 700 ? 1800 : 3200;
+    targets = SHAPES.map(s => sampleShape(s, count));
     particles = [];
-    while (particles.length < count) {
-      const x = rand(-1.3, 1.3), y = rand(-1.3, 1.25), v = heartVal(x, y);
-      if (v > 0 || Math.random() > 0.25 + 0.75 * Math.exp(v * 18)) continue;
-      const hx = cx + x * S, hy = cy - y * S;
+    for (let i = 0; i < count; i++) {
+      const hy = targets[0][i * 2 + 1];
       particles.push({
-        hx, hy, x: cx + rand(-W*.12, W*.12), y: poolY + rand(-6, 10),
-        vx: 0, vy: 0,
-        delay: Math.max(0, 3.6 * (1 - (hy - (cy - S*1.3)) / (S*2.6)) + rand(0, .6)),
-        swirl: Math.random() < .5 ? -1 : 1,
-        r: rand(.6, 1.9), col: SHADES[(Math.random() * SHADES.length) | 0],
+        x: cx + rand(-W * .12, W * .12), y: poolY + rand(-6, 10), vx: 0, vy: 0, i,
+        delay: Math.max(0, 3.6 * (1 - (hy + SH / 2) / SH * -1 - 0) * 0), // set below
+        swirl: Math.random() < .5 ? -1 : 1, r: rand(.6, 1.9), col: SHADES[(Math.random() * SHADES.length) | 0],
         a: rand(.55, 1), tw: rand(0, 6.28), tws: rand(1, 3.5),
       });
     }
-    cycleStart = t; phase = 'rise';
+    for (const p of particles) p.delay = Math.max(0, 3.6 * (1 - (targets[0][p.i * 2 + 1] + SH / 2) / SH) + rand(0, .6));
+    shapeIdx = 0; phase = 'form'; phaseT0 = t; first = true; showLabel();
+  }
+
+  function showLabel() { labelEl.textContent = NAMES[shapeIdx]; labelEl.style.opacity = .8; }
+
+  function scatter() {
+    phase = 'scatter'; phaseT0 = t; labelEl.style.opacity = 0;
+    for (const p of particles) {
+      const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) + 1, s = rand(4, 13);
+      p.vx += dx / d * s + rand(-3, 3); p.vy += dy / d * s + rand(-3, 3);
+    }
+    for (let i = 0; i < 160; i++) {
+      const p = particles[(Math.random() * particles.length) | 0], a = rand(0, 6.28), s = rand(1, 6);
+      sparkles.push({ x: p.x, y: p.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(.7, 1.2), size: rand(2, 6) });
+    }
   }
 
   function burst(x, y) {
@@ -67,10 +153,7 @@
       const dx = p.x - x, dy = p.y - y, d = Math.hypot(dx, dy) + 1;
       if (d < 260) { const f = (1 - d / 260) * 14; p.vx += dx / d * f; p.vy += dy / d * f; }
     }
-    for (let i = 0; i < 40; i++) {
-      const a = rand(0, 6.28), s = rand(1.5, 6);
-      sparkles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, size: rand(2, 5) });
-    }
+    for (let i = 0; i < 40; i++) { const a = rand(0, 6.28), s = rand(1.5, 6); sparkles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, size: rand(2, 5) }); }
   }
 
   function star(x, y, s) {
@@ -80,88 +163,91 @@
     ctx.closePath(); ctx.fill();
   }
 
+  /* ---------- main loop ---------- */
+  let last2 = performance.now();
   function frame(now) {
-    const dt = Math.min((now - last) / 1000, 0.05); last = now; t += dt;
-    const age = t - cycleStart;
+    step(Math.min((now - last2) / 1000, 0.05)); last2 = now;
+    requestAnimationFrame(frame);
+  }
+  function step(dt) {
+    t += dt;
+    const age = t - phaseT0;
 
-    if (phase === 'rise' && age > FORM_TIME) { phase = 'fall'; cycleStart = t; }
-    else if (phase === 'fall' && age > FALL_TIME) { phase = 'rise'; cycleStart = t; for (const p of particles) { p.x = cx + rand(-W*.12, W*.12); p.y = poolY + rand(-6, 10); p.vx = p.vy = 0; } }
-    const a0 = t - cycleStart;
-    const beat = 1 + 0.018 * Math.sin(t * 3.4);
+    if (phase === 'form' && age > (first ? FIRST_HOLD : HOLD)) scatter();
+    else if (phase === 'scatter' && age > SCATTER) {
+      first = false; shapeIdx = (shapeIdx + 1) % SHAPES.length; phase = 'form'; phaseT0 = t; showLabel();
+    }
+    const a0 = t - phaseT0, beat = 1 + 0.016 * Math.sin(t * 3.4);
+    const T = targets[shapeIdx];
 
-    // trails
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'rgba(0,0,0,0.16)';
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.fillRect(0, 0, W, H);
 
-    // pool glow
     const pulse = 0.75 + 0.25 * Math.sin(t * 2.6);
     const g = ctx.createRadialGradient(cx, poolY, 0, cx, poolY, W * 0.22);
-    g.addColorStop(0, `rgba(125,211,252,${0.55 * pulse})`);
-    g.addColorStop(.5, `rgba(37,99,235,${0.22 * pulse})`);
-    g.addColorStop(1, 'rgba(29,78,216,0)');
+    g.addColorStop(0, `rgba(125,211,252,${0.5 * pulse})`); g.addColorStop(.5, `rgba(37,99,235,${0.2 * pulse})`); g.addColorStop(1, 'rgba(29,78,216,0)');
     ctx.save(); ctx.translate(0, poolY); ctx.scale(1, 0.18); ctx.translate(0, -poolY);
     ctx.fillStyle = g; ctx.fillRect(0, poolY - W, W, W * 2); ctx.restore();
 
     ctx.globalCompositeOperation = 'lighter';
-    const R = Math.max(90, S * 0.55);
+    const R = Math.max(90, scale * 70);
+    const gather = phase === 'form' && !first && a0 < 2.2;       // faster pull right after a scatter
     for (const p of particles) {
-      const rising = phase === 'rise';
-      if (rising && a0 < p.delay) continue;
-      let tx = cx + (p.hx - cx) * beat, ty = cy + (p.hy - cy) * beat;
-      let k = 0.010, damp = 0.90;
-      if (!rising) { tx = cx + (p.x - cx) * 0.5; ty = poolY; k = 0.02; }
-      const dx = tx - p.x, dy = ty - p.y;
-      p.vx += dx * k; p.vy += dy * k;
-      if (rising) {                       // swirl while travelling
-        const dist = Math.hypot(dx, dy), sw = Math.min(dist / S, 1.4) * 0.35 * p.swirl;
-        p.vx += -dy / (dist + 1) * sw; p.vy += dx / (dist + 1) * sw;
+      if (first && a0 < p.delay) continue;
+      let ax = 0, ay = 0, damp = 0.90;
+      if (phase === 'scatter') {                                    // drift with light turbulence
+        damp = 0.965; ax = Math.sin(t * 2 + p.y * .01 + p.i) * .05; ay = Math.cos(t * 2 + p.x * .01) * .05;
+      } else {
+        const tx = cx + T[p.i * 2] * scale * beat, ty = cy + T[p.i * 2 + 1] * scale * beat;
+        const dx = tx - p.x, dy = ty - p.y, k = gather ? 0.016 : 0.010;
+        ax = dx * k; ay = dy * k;
+        const dist = Math.hypot(dx, dy), settling = first ? a0 < FIRST_HOLD - 3 : gather;
+        if (settling) { const sw = Math.min(dist / (scale * 120), 1.4) * 0.35 * p.swirl; ax += -dy / (dist + 1) * sw; ay += dx / (dist + 1) * sw; }
       }
       if (mouse.active) {
         const mx = p.x - mouse.x, my = p.y - mouse.y, d = Math.hypot(mx, my);
-        if (d < R) { const f = Math.pow(1 - d / R, 2) * 2.2; p.vx += mx / (d + 1) * f; p.vy += my / (d + 1) * f; }
+        if (d < R) { const f = Math.pow(1 - d / R, 2) * 2.2; ax += mx / (d + 1) * f; ay += my / (d + 1) * f; }
       }
-      p.vx *= damp; p.vy *= damp; p.x += p.vx; p.y += p.vy;
+      p.vx = (p.vx + ax) * damp; p.vy = (p.vy + ay) * damp; p.x += p.vx; p.y += p.vy;
 
       const tw = 0.6 + 0.4 * Math.sin(t * p.tws + p.tw);
-      const fade = rising ? Math.min(1, (a0 - p.delay) * 1.2) : Math.max(0, 1 - a0 / FALL_TIME);
-      ctx.globalAlpha = p.a * tw * fade;
-      ctx.fillStyle = p.col;
+      const fade = first ? Math.min(1, (a0 - p.delay) * 1.2) : 1;
+      ctx.globalAlpha = p.a * tw * fade; ctx.fillStyle = p.col;
       ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
     }
 
-    // sparkles: burst ones + ambient twinkles on the heart
     ctx.fillStyle = '#e0f2fe';
     for (let i = sparkles.length - 1; i >= 0; i--) {
       const s = sparkles[i];
       s.x += s.vx; s.y += s.vy; s.vx *= .96; s.vy *= .96; s.life -= dt * 0.9;
       if (s.life <= 0) { sparkles.splice(i, 1); continue; }
-      ctx.globalAlpha = s.life; star(s.x, s.y, s.size);
+      ctx.globalAlpha = Math.min(1, s.life); star(s.x, s.y, s.size);
     }
-    if (phase === 'rise' && a0 > 4 && Math.random() < 0.35) {
+    if (phase === 'form' && a0 > 2.5 && Math.random() < 0.35) {
       const p = particles[(Math.random() * particles.length) | 0];
       sparkles.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: .7, size: rand(3, 7) });
     }
 
-    // cursor glow
     if (mouse.active) {
       const cg = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 40);
       cg.addColorStop(0, 'rgba(125,211,252,.35)'); cg.addColorStop(1, 'rgba(125,211,252,0)');
       ctx.globalAlpha = 1; ctx.fillStyle = cg; ctx.fillRect(mouse.x - 40, mouse.y - 40, 80, 80);
     }
     ctx.globalAlpha = 1;
-    requestAnimationFrame(frame);
   }
+  window.__step = (n, dt = 0.016) => { for (let i = 0; i < n; i++) step(dt); };
 
   const hint = document.getElementById('hint');
-  const hideHint = () => { hint.style.opacity = 0; };
-  addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; setTimeout(hideHint, 4000); });
+  addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; setTimeout(() => hint.style.opacity = 0, 4000); });
   addEventListener('pointerleave', () => { mouse.active = false; });
   addEventListener('pointerdown', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; burst(e.clientX, e.clientY); });
   addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') mouse.active = false; });
   addEventListener('resize', layout);
+  // debug/preview: jump straight to the nth shape (?shape=2)
+  const q = new URLSearchParams(location.search).get('shape');
 
   layout();
+  if (q !== null) { shapeIdx = +q % SHAPES.length; first = false; phase = 'form'; phaseT0 = t; showLabel(); for (const p of particles) { p.x = cx + targets[shapeIdx][p.i*2]*scale; p.y = cy + targets[shapeIdx][p.i*2+1]*scale; } }
   requestAnimationFrame(frame);
 })();
 </script>
